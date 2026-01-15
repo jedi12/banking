@@ -5,29 +5,28 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.demo.banking.configuration.AccountProperties;
 import ru.demo.banking.model.Account;
+import ru.demo.banking.model.User;
 import ru.demo.banking.utils.MathUtils;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 @Service
 public class AccountService {
 
     private final AccountProperties accountProperties;
-    private Map<Long, Account> accounts;
+    private final RepoService repoService;
     private Long newAccountId;
 
     @Autowired
-    public AccountService(AccountProperties accountProperties) {
+    public AccountService(AccountProperties accountProperties, RepoService repoService) {
         this.accountProperties = accountProperties;
+        this.repoService = repoService;
     }
 
     @PostConstruct
     private void init() {
-        accounts = new HashMap<>();
         newAccountId = 1L;
     }
 
@@ -36,10 +35,16 @@ public class AccountService {
             throw new IllegalArgumentException("Не указан id пользователя");
         }
 
+        User user = repoService.getUsers().get(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("Пользователь с указанным id не существует");
+        }
+
         BigDecimal defaultAmount = MathUtils.roundWithScale(BigDecimal.valueOf(accountProperties.getDefaultAmount()), 2);
         Account account = new Account(newAccountId++, userId, defaultAmount);
+        repoService.getAccounts().put(account.getId(), account);
 
-        accounts.put(account.getId(), account);
+        user.getAccountList().add(account);
 
         return account;
     }
@@ -49,7 +54,7 @@ public class AccountService {
             throw new IllegalArgumentException("Не указан id счета");
         }
 
-        Account account = accounts.get(accountId);
+        Account account = repoService.getAccounts().get(accountId);
         if (account == null) {
             throw new IllegalArgumentException("Счет с указанным id не существует");
         }
@@ -67,7 +72,10 @@ public class AccountService {
         BigDecimal moneyAmountSum = MathUtils.sum(mainAccount.getMoneyAmount(), account.getMoneyAmount());
         mainAccount.setMoneyAmount(moneyAmountSum);
 
-        accounts.remove(accountId);
+        repoService.getAccounts().remove(accountId);
+
+        User user = repoService.getUsers().get(account.getUserId());
+        user.getAccountList().remove(account);
     }
 
     public void depositToAccount(Long accountId, BigDecimal moneyAmount) {
@@ -99,7 +107,7 @@ public class AccountService {
             throw new IllegalArgumentException("Не указан id счета");
         }
 
-        Account account = accounts.get(accountId);
+        Account account = repoService.getAccounts().get(accountId);
         if (account == null) {
             throw new IllegalArgumentException("Счет с указанным id не существует");
         }
@@ -117,7 +125,7 @@ public class AccountService {
             throw new IllegalArgumentException("Не указан id счета отправителя");
         }
 
-        Account fromAccount = accounts.get(fromAccountId);
+        Account fromAccount = repoService.getAccounts().get(fromAccountId);
         if (fromAccount == null) {
             throw new IllegalArgumentException("Счет отправителя с указанным id не существует");
         }
@@ -126,7 +134,7 @@ public class AccountService {
             throw new IllegalArgumentException("Не указан id счета получателя");
         }
 
-        Account toAccount = accounts.get(toAccountId);
+        Account toAccount = repoService.getAccounts().get(toAccountId);
         if (toAccount == null) {
             throw new IllegalArgumentException("Счет получателя с указанным id не существует");
         }
@@ -149,6 +157,6 @@ public class AccountService {
     }
 
     public List<Account> getAccountsByUser(Long userId) {
-        return accounts.values().stream().filter(account -> account.getUserId().equals(userId)).sorted(Comparator.comparing(Account::getId)).toList();
+        return repoService.getAccounts().values().stream().filter(account -> account.getUserId().equals(userId)).sorted(Comparator.comparing(Account::getId)).toList();
     }
 }

@@ -11,17 +11,17 @@ import java.util.*;
 public class UserService {
 
     private final AccountService accountService;
-    private Map<Long, User> users;
+    private final RepoService repoService;
     private Long newUserId;
 
     @Autowired
-    public UserService(AccountService accountService) {
+    public UserService(AccountService accountService, RepoService repoService) {
         this.accountService = accountService;
+        this.repoService = repoService;
     }
 
     @PostConstruct
     private void init() {
-        users = new TreeMap<>();
         newUserId = 1L;
     }
 
@@ -37,30 +37,22 @@ public class UserService {
         }
 
         User user = new User(newUserId++, login, new ArrayList<>());
-        user.getAccountList().add(accountService.createAccount(user.getId()));
+        repoService.getUsers().put(user.getId(), user);
 
-        users.put(user.getId(), user);
+        accountService.createAccount(user.getId());
 
         return user;
     }
 
     public List<User> getAllUsers() {
-        List<User> userList = new ArrayList<>();
-
-        for (User user: users.values()) {
-            user.getAccountList().clear();
-            user.getAccountList().addAll(accountService.getAccountsByUser(user.getId()));
-            userList.add(user);
-        }
-
-        return userList;
+        return new ArrayList<>(repoService.getUsers().values());
     }
 
     public boolean isUserExists(Long userId) {
-        return users.containsKey(userId);
+        return repoService.getUsers().containsKey(userId);
     }
 
     private User getUserByLogin(String login) {
-        return users.values().stream().filter(user -> user.getLogin().equals(login)).findFirst().orElse(null);
+        return repoService.getUsers().values().stream().filter(user -> user.getLogin().equals(login)).findFirst().orElse(null);
     }
 }
