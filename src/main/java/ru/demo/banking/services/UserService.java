@@ -1,28 +1,26 @@
 package ru.demo.banking.services;
 
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import ru.demo.banking.model.Account;
 import ru.demo.banking.model.User;
+import ru.demo.banking.utils.TransactionHelper;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class UserService {
 
     private final AccountService accountService;
     private final RepoService repoService;
-    private Long newUserId;
+    private final TransactionHelper transactionHelper;
 
     @Autowired
-    public UserService(AccountService accountService, RepoService repoService) {
+    public UserService(AccountService accountService, RepoService repoService, TransactionHelper transactionHelper) {
         this.accountService = accountService;
         this.repoService = repoService;
-    }
-
-    @PostConstruct
-    private void init() {
-        newUserId = 1L;
+        this.transactionHelper = transactionHelper;
     }
 
     public User createUser(String login) {
@@ -36,23 +34,25 @@ public class UserService {
             throw new IllegalArgumentException("Пользователь с таким логином уже существует в системе");
         }
 
-        User user = new User(newUserId++, login, new ArrayList<>());
-        repoService.getUsers().put(user.getId(), user);
+        User user = new User(login, new ArrayList<>());
 
-        accountService.createAccount(user.getId());
-
-        return user;
+        return transactionHelper.executeInTransaction(session -> {
+            repoService.saveNewUser(user);
+            Account account = accountService.createAccount(user);
+            user.getAccountList().add(account);
+            return user;
+        });
     }
 
     public List<User> getAllUsers() {
-        return new ArrayList<>(repoService.getUsers().values());
+        return repoService.getUsers();
     }
 
-    public boolean isUserExists(Long userId) {
-        return repoService.getUsers().containsKey(userId);
+    public User getUserById(Long userId) {
+        return repoService.getUserById(userId);
     }
 
     private User getUserByLogin(String login) {
-        return repoService.getUsers().values().stream().filter(user -> user.getLogin().equals(login)).findFirst().orElse(null);
+        return repoService.getUserByLogin(login);
     }
 }
