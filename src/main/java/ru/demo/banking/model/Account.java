@@ -1,20 +1,28 @@
 package ru.demo.banking.model;
 
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.util.Objects;
 
+@Entity
+@Table(name = "accounts")
 public class Account {
 
     private Long id;
-    private Long userId;
+    private User user;
     private BigDecimal moneyAmount;
 
-    public Account(Long id, Long userId, BigDecimal moneyAmount) {
-        this.id = id;
-        this.userId = userId;
+    public Account() {}
+
+    public Account(User user, BigDecimal moneyAmount) {
+        this.user = user;
         this.moneyAmount = moneyAmount;
     }
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     public Long getId() {
         return id;
     }
@@ -22,13 +30,16 @@ public class Account {
         this.id = id;
     }
 
-    public Long getUserId() {
-        return userId;
+    @ManyToOne
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    public User getUser() {
+        return user;
     }
-    public void setUserId(Long userId) {
-        this.userId = userId;
+    public void setUser(User user) {
+        this.user = user;
     }
 
+    @Column(name = "money_amount")
     public BigDecimal getMoneyAmount() {
         return moneyAmount;
     }
@@ -53,7 +64,6 @@ public class Account {
     public String toString() {
         return "Account{" +
                 "id=" + id +
-                ", userId=" + userId +
                 ", moneyAmount=" + moneyAmount +
                 '}';
     }

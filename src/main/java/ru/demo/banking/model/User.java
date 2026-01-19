@@ -1,20 +1,28 @@
 package ru.demo.banking.model;
 
+import jakarta.persistence.*;
+
 import java.util.List;
 import java.util.Objects;
 
+@Entity
+@Table(name = "users")
 public class User {
 
     private Long id;
     private String login;
     private List<Account> accountList;
 
-    public User(Long id, String login, List<Account> accountList) {
-        this.id = id;
+    public User() {}
+
+    public User(String login, List<Account> accountList) {
         this.login = login;
         this.accountList = accountList;
     }
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     public Long getId() {
         return id;
     }
@@ -22,6 +30,7 @@ public class User {
         this.id = id;
     }
 
+    @Column(name = "login")
     public String getLogin() {
         return login;
     }
@@ -29,6 +38,7 @@ public class User {
         this.login = login;
     }
 
+    @OneToMany(mappedBy = "user")
     public List<Account> getAccountList() {
         return accountList;
     }

@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import ru.demo.banking.configuration.AnsiEscapeCode;
 import ru.demo.banking.model.Account;
+import ru.demo.banking.model.User;
 import ru.demo.banking.services.AccountService;
 import ru.demo.banking.services.UserService;
 import ru.demo.banking.utils.ConvertUtils;
@@ -26,11 +27,12 @@ public class AccountCreateCommand implements OperationCommand {
         System.out.println("Укажите id пользователя, для которого создается счет:");
         Long userId = ConvertUtils.getLong(scanner.nextLine());
 
-        if (!userService.isUserExists(userId)) {
+        User user = userService.getUserById(userId);
+        if (user == null) {
             throw new IllegalArgumentException("Пользователь с таким id не существует. Счет для него создать невозможно.");
         }
 
-        Account account = accountService.createAccount(userId);
+        Account account = accountService.createAccount(user);
 
         System.out.printf("%n%sСоздан новый счет: %s%s%n", AnsiEscapeCode.GREEN, account, AnsiEscapeCode.RESET);
     }
